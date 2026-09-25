@@ -1,0 +1,36 @@
+name: Deploy Production API (WolfeTech)
+
+# Deploys straight to the WolfeTech CIPP-API Function App (cipp7xyce) whenever master
+# changes -- including the weekly automated syncs from upstream KelvinTegelaar/CIPP-API.
+# publish_release.yml only publishes a release/blob artifact; nothing previously consumed
+# it, so the live backend never actually updated. This closes that gap.
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+env:
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: "."
+
+jobs:
+  deploy:
+    name: Deploy to cipp7xyce
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build and stage modules
+        shell: pwsh
+        run: ./Tools/Build-DevApiModules.ps1
+
+      - name: Deploy to Azure Function App
+        uses: Azure/functions-action@v1
+        with:
+          app-name: "cipp7xyce"
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          publish-profile: ${{ secrets.CIPP7XYCE_PUBLISH_PROFILE }}
